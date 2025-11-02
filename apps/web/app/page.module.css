@@ -6,12 +6,11 @@
   --button-primary-hover: #383838;
   --button-secondary-hover: #f2f2f2;
 
-  display: grid;
-  grid-template-rows: 20px 1fr 20px;
-  align-items: center;
-  justify-items: center;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
   min-height: 100svh;
-  padding: 80px;
+  padding: 20px;
   gap: 64px;
   font-synthesis: none;
 }
@@ -30,8 +29,14 @@
 .main {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
   gap: 32px;
-  grid-row-start: 2;
+  padding: 20px;
+  max-width: 500px;
+  width: 100%;
+  flex-grow: 1;
+  position: relative;
 }
 
 .main ol {
@@ -59,9 +64,11 @@
 .ctas {
   display: flex;
   gap: 16px;
+  position: sticky;
 }
 
-.ctas a {
+.ctas a,
+.ctas button {
   appearance: none;
   border-radius: 128px;
   height: 48px;
@@ -69,28 +76,34 @@
   border: none;
   font-family: var(--font-geist-sans);
   border: 1px solid transparent;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   font-size: 16px;
   line-height: 20px;
   font-weight: 500;
 }
 
+.ctas button.primary,
 a.primary {
   background: var(--foreground);
   color: var(--background);
   gap: 8px;
 }
 
+button.secondary,
 a.secondary {
   border-color: var(--gray-alpha-200);
   min-width: 180px;
 }
 
-button.secondary {
+input.secondary {
+  flex-grow: 1;
   appearance: none;
   border-radius: 128px;
   height: 48px;
@@ -98,51 +111,30 @@ button.secondary {
   border: none;
   font-family: var(--font-geist-sans);
   border: 1px solid transparent;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    border-color 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
   line-height: 20px;
   font-weight: 500;
-  background: transparent;
+  background: var(--button-secondary-hover);
+
   border-color: var(--gray-alpha-200);
   min-width: 180px;
 }
 
-.footer {
-  font-family: var(--font-geist-sans);
-  grid-row-start: 3;
-  display: flex;
-  gap: 24px;
-}
-
-.footer a {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.footer img {
-  flex-shrink: 0;
-}
-
 /* Enable hover only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
+  button.primary:hover {
     background: var(--button-primary-hover);
     border-color: transparent;
   }
-
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
-  }
-
-  .footer a:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
+  input.secondary:hover {
+    background: transparent;
   }
 }
 
@@ -164,20 +156,15 @@ button.secondary {
     flex-direction: column;
   }
 
-  .ctas a {
+  .ctas button,
+  .ctas input {
     font-size: 14px;
     height: 40px;
     padding: 0 16px;
   }
 
-  a.secondary {
+  input.secondary {
     min-width: auto;
-  }
-
-  .footer {
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
   }
 }
 
