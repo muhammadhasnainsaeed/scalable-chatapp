@@ -1,135 +1,155 @@
-# Turborepo starter
+# Scalable Chat App
 
-This Turborepo starter is maintained by the Turborepo core team.
+This repository contains a horizontally-scalable, real-time chat system built as a Turborepo monorepo. It includes a TypeScript-based Web client (`web`), a Node/TypeScript real-time server (`server`), and shared UI/config packages.
 
-## Using this example
+This README explains how the system works, how to run it locally, scaling considerations, and next steps for production.
 
-Run the following command:
+## Table of Contents
 
-```sh
-npx create-turbo@latest
+- [What this project is](#what-this-project-is)
+- [Architecture & components](#architecture--components)
+- [How it works (request flow)](#how-it-works-request-flow)
+- [Features](#features)
+- [Run & develop locally](#run--develop-locally)
+- [Production & scaling guidance](#production--scaling-guidance)
+- [Environment & configuration notes](#environment--configuration-notes)
+- [Troubleshooting](#troubleshooting)
+- [Next steps and improvements](#next-steps-and-improvements)
+
+## What this project is
+
+A real-time chat system designed to be scalable and simple to extend. The server uses Socket.IO for WebSocket communication and Redis (via `ioredis`) as a pub/sub backbone so multiple server instances can broadcast messages to all connected clients.
+
+Key goals:
+
+- Simple developer experience for local development (single-command dev).
+- Horizontal scalability using Redis pub/sub (can be adapted to Socket.IO Redis adapter or Kafka for higher throughput).
+- Clear separation between web client and server.
+
+## Architecture & components
+
+Repository layout (high-level):
+
+- `apps/server` — Node + TypeScript Socket.IO server that accepts websocket connections and publishes/receives messages via Redis pub/sub.
+- `apps/web` — Next.js/React client that connects to the server via sockets (client implementation found in `app` / `context/SocketProvider.tsx`).
+- `packages/ui` — shared UI components used by the frontend.
+
+The server currently uses `ioredis` to publish messages to a `MESSAGES` channel and subscribes to the same channel to broadcast incoming messages to connected sockets.
+
+## How it works (request flow)
+
+1. Client opens a WebSocket connection to the server (Socket.IO).
+2. When a client sends a chat message (for example `event:message`), the server receives it and publishes it to Redis on the `MESSAGES` channel.
+3. Every server instance subscribes to the Redis `MESSAGES` channel. When a message is published, each instance receives the Redis event and emits the message to its locally connected sockets.
+4. The client(s) listening for `message` events display the new chat message.
+
+This approach decouples message receipt from message broadcast and allows multiple server instances to stay in sync using Redis as a simple message bus.
+
+## Features
+
+- Real-time messaging via Socket.IO
+- Redis-backed pub/sub so multiple server instances can coordinate
+- Monorepo structure (web, server, shared UI)
+- TypeScript throughout
+
+## Run & develop locally
+
+Prerequisites
+
+- Node.js >= 18 (the monorepo `engines` requires Node >=18)
+- npm (this repo uses npm workspaces by default)
+- Redis server running locally (default config in `apps/server/src/services/socket.ts` points to `127.0.0.1:6379`)
+
+Install dependencies (from repository root):
+
+```bash
+npm install
 ```
 
-## What's inside?
+Run the entire monorepo in development (uses Turborepo tasks):
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```bash
+npm run dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+Run the server only (helpful during development):
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```bash
+cd apps/server
+npm install
+npm run dev
 ```
 
-### Develop
+Run the web app only:
 
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```bash
+cd apps/web
+npm install
+npm run dev
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+Build for production:
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+npm run build
 ```
 
-### Remote Caching
+Start the compiled server (after building):
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+cd apps/server
+npm run start
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Production & scaling guidance
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+The current code already uses Redis pub/sub which lets multiple server instances broadcast messages to all connected clients. For production, consider these improvements:
+
+- Use the official Socket.IO Redis adapter (socket.io-redis) instead of a custom pub/sub for better integration and performance.
+- Configure server instances behind a load balancer. If using WebSockets (Socket.IO), either:
+  - Enable sticky sessions on the load balancer so a client stays attached to the same instance, or
+  - Use the Redis adapter (recommended), which avoids the need for sticky sessions.
+- Use a managed Redis (or Redis cluster) for high availability and throughput.
+- Persist chat history in a database (e.g., PostgreSQL, MongoDB, or Cassandra) for long-term storage and retrieval.
+- For higher throughput / ordering guarantees, consider replacing Redis pub/sub with a durable streaming system (e.g., Kafka, Pulsar).
+- Add authentication/authorization (JWT or session-based auth) to validate users and control access to rooms.
+- Add rate-limiting (per-IP or per-user) and input validation to mitigate abuse.
+
+## Environment & configuration notes
+
+- The server's current Redis configuration is set in `apps/server/src/services/socket.ts` (host `127.0.0.1`, port `6379`). For production, move these values to environment variables.
+- Default server port is `8000` (see `apps/server/src/index.ts`). Set `PORT` when starting the server to override.
+
+Example environment variables to add (suggested):
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+PORT=8000
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=
 ```
 
-## Useful Links
+## Troubleshooting
 
-Learn more about the power of Turborepo:
+- If the server does not start, check the console for errors and ensure Redis is reachable at the configured address.
+- If messages are not broadcast between instances, ensure each instance can connect to Redis and that they subscribe/publish to the same channel.
+- For CORS/socket connection errors, verify the allowed origins on the server Socket.IO configuration.
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+## Next steps and improvements
+
+- Move Redis config to environment variables and securely manage secrets (Vault/managed secrets).
+- Add authentication (user identity), rooms, typing indicators, presence tracking, and message persistence.
+- Add tests: unit tests for server logic and integration tests for end-to-end socket flows.
+- Add monitoring and metrics (Prometheus, Grafana) and centralized logs (ELK/Datadog).
+- Add CI/CD pipeline that builds, tests, and deploys the server and web apps.
+
+---
+
+If you'd like, I can:
+
+- update the server to read Redis config from environment variables,
+- wire up the Socket.IO Redis adapter,
+- add a minimal message persistence layer (e.g., SQLite or PostgreSQL) and simple tests,
+- or create a short deployment guide for Kubernetes or a cloud provider.
+
+Tell me which of the above you'd like me to implement next and I'll create a plan and apply changes.
