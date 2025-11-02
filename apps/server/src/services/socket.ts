@@ -1,5 +1,14 @@
+import Redis from "ioredis";
 import { Server } from "socket.io";
 
+const redisConfig = {
+  host: "127.0.0.1",
+  port: 6379,
+  username: "default",
+  password: "",
+};
+const pub = new Redis(redisConfig);
+const sub = new Redis(redisConfig);
 class SocketService {
   private _io: Server;
   constructor() {
@@ -10,6 +19,7 @@ class SocketService {
         origin: "*",
       },
     });
+    sub.subscribe("MESSAGES");
   }
 
   public initListeners() {
@@ -20,7 +30,16 @@ class SocketService {
       console.log(`New Socket Connected ${socket.id}`);
       socket.on("event:message", async (message: { message: string }) => {
         console.log("New Message Rec", message);
+        // publish this message to redis
+        await pub.publish("MESSAGES", JSON.stringify(message));
       });
+    });
+
+    sub.on("message", async (channel, message) => {
+      if (channel === "MESSAGES") {
+        console.log("new message from redis", message);
+        io.emit("message", message);
+      }
     });
   }
 

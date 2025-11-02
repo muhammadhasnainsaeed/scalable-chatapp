@@ -3,15 +3,14 @@ import React, { useState } from "react";
 import styles from "../page.module.css";
 import { useSocket } from "../../context/SocketProvider";
 const ChatBox = () => {
-  const { sendMessage } = useSocket();
+  const { sendMessage, messages } = useSocket();
   const [message, setMessage] = useState("");
   return (
     <main className={styles.main}>
       <ol>
-        <li>
-          Get started by editing <code>apps/web/app/page.tsx</code>
-        </li>
-        <li>Save and see your changes instantly.</li>
+        {messages.map((msg, idx) => (
+          <li key={idx}>{msg}</li>
+        ))}
       </ol>
 
       <div className={styles.ctas}>
